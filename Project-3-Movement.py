@@ -38,7 +38,11 @@ def newNodes(nodeState, Goal):
     newX = round((x+dx)*2)/2
     newY = round((y+dy)*2)/2
     c2c = round(np.sqrt(np.square(x - newX) + np.square(y - newY)), 2)
-    newNodes.append((c2c, (newX, newY, thetalist[i+2])))
+    if thetalist[i+2] < 0:
+      thetalist[i+2] = thetalist[i+2] + 360
+    theta = thetalist[i+2]//30
+    newNodes.append((c2c, (newX, newY, theta)))
+    # newNodes.append((c2c, (newX, newY, thetalist[i+2])))
     #c2c.append(round(np.sqrt(np.square(x - round((x + dx)*2)/2) + np.square(y - round((y+dy)*2)/2)), 2))
     #c2g.append(round(np.sqrt(np.square(goalx - newX) + np.square(goaly - newY)), 2))
 
@@ -56,8 +60,7 @@ newNodes = newNodes(node, goal)
 print('')
 print(newNodes)
 print('')
-'''
-print(c2c)
-print('')
-print(c2g)
-print('')'''
+
+def heuristic(node, goal_node, weight):
+  return weight * np.sqrt(np.square(goal_node[0] - node[0]) + np.square(goal_node[1] - node[1]))
+  
