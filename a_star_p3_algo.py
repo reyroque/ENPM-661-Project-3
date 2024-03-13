@@ -1,8 +1,3 @@
-# Project 2: Implementation of the Dijkstra Algorithm for a Point Robot
-# Github Repository: https://github.com/reyroque/ENPM661-DijkstraPointRobot
-# Written by: Rey Roque-Pérez
-# UID: 120498626
-
 from queue import PriorityQueue
 import time
 
