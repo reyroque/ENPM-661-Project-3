@@ -28,32 +28,36 @@ def newNodes(nodeState, Goal):
 
   # For all 12 new nodes, calculate new angle (0 -> 330 deg), the dx and dy values, and add them to the newNodes list
   # Then calculate C2C and C2G for each new node using distance between two points calculation
-  for i in range (0,12):
+  for i in range (-2,3):
     if theta + 30* i > 330:
       thetalist.append(theta + 30*i - 360)
     else: 
       thetalist.append(theta + 30*i)
-    dx = r*np.cos(np.pi*thetalist[i]/180)
-    dy = r*np.sin(np.pi*thetalist[i]/180)
-    newNodes.append((round((x+dx)*2)/2, round((y+dy)*2)/2, thetalist[i]))
-    c2c.append(round(np.sqrt(np.square(x - round((x + dx)*2)/2) + np.square(y - round((y+dy)*2)/2)), 2))
-    c2g.append(round(np.sqrt(np.square(goalx - round((x + dx)*2)/2) + np.square(goaly - round((y+dy)*2)/2)), 2))
+    dx = r*np.cos(np.pi*thetalist[i+2]/180)
+    dy = r*np.sin(np.pi*thetalist[i+2]/180)
+    newX = round((x+dx)*2)/2
+    newY = round((y+dy)*2)/2
+    c2c = round(np.sqrt(np.square(x - newX) + np.square(y - newY)), 2)
+    newNodes.append((c2c, (newX, newY, thetalist[i+2])))
+    #c2c.append(round(np.sqrt(np.square(x - round((x + dx)*2)/2) + np.square(y - round((y+dy)*2)/2)), 2))
+    #c2g.append(round(np.sqrt(np.square(goalx - newX) + np.square(goaly - newY)), 2))
 
-  return newNodes, c2c, c2g
+  return newNodes
 
 # test starting node
-node = (1,1,0)
+node = (.5,.5,0)
 
 # test goal node
 goal = (0, 0, 0)
 
 # Test function
-[newNodes, c2c, c2g] = newNodes(node, goal)
-
+#newNodes, c2c, c2g] = newNodes(node, goal)
+newNodes = newNodes(node, goal)
 print('')
 print(newNodes)
 print('')
+'''
 print(c2c)
 print('')
 print(c2g)
-print('')
+print('')'''
