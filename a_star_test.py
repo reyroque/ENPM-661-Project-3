@@ -43,45 +43,6 @@ class UpdateableQueue:
         return item in self.entry_finder
 
 ###### Move functions ######
-def move_right(node):
-    new_node = (node[0] + 1, node[1])
-    return new_node
-
-def move_left(node):
-    new_node = (node[0] - 1, node[1])
-    return new_node
-
-def move_up(node):
-    new_node = (node[0], node[1] + 1)
-    return new_node
-
-def move_down(node):
-    new_node = (node[0], node[1] - 1)
-    return new_node
-
-def move_up_right(node):
-    new_node = (node[0] + 1, node[1] + 1)
-    return new_node
-
-def move_up_left(node):
-    new_node = (node[0] - 1, node[1] + 1)
-    return new_node
-
-def move_down_right(node):
-    new_node = (node[0] + 1, node[1] - 1)
-    return new_node
-
-def move_down_left(node):
-    new_node = (node[0] - 1, node[1] - 1)
-    return new_node
-
-def get_straight_moves(node):
-    actions = (move_right(node),move_left(node),move_up(node),move_down(node))
-    return actions
-
-def get_diagonal_moves(node):
-    actions = (move_up_right(node),move_up_left(node),move_down_right(node),move_down_left(node))
-    return actions
 
 ###### End Move functions ######
 
@@ -233,10 +194,57 @@ def obstacle_space():
 
     return obstacle_list
 
-def heuristic(node, goal_node, weight):
-    return weight * np.sqrt((goal_node[0] - node[0])**2 + (goal_node[1] - node[1])**2)
+def newNodes(nodeState, Goal, r):
+  # Extract current node information
+  node = tuple(nodeState)
+  x = node[0]/2
+  y = node[1]/2
+  theta = node[2]
 
-def a_star_algorithm(start_node, goal_node, obstacles, weight):
+  # Extract goal node information
+  goal = tuple(Goal)
+  goalx = goal[0]/2
+  goaly = goal[1]/2
+  goaltheta = goal[2]
+
+  # define distance (r), and make empty lists to fill with values
+  newNodes = [] # new node information
+  thetalist = [] # list of angles for calculations from 0 deg to 330 deg
+  dx = [] # list of changes in x direction
+  dy = [] # list of changes in y direction
+  c2c = [] # list of costs to come for each new node from parent node
+  c2g = [] # list of costs to go for each new node to the goal node
+
+  i = 0
+
+  # For all 12 new nodes, calculate new angle (0 -> 330 deg), the dx and dy values, and add them to the newNodes list
+  # Then calculate C2C and C2G for each new node using distance between two points calculation
+  for i in range (-2,3):
+    if theta + 30* i > 330:
+      thetalist.append(theta + 30*i - 360)
+    else: 
+      thetalist.append(theta + 30*i)
+    dx = r*np.cos(np.pi*thetalist[i+2]/180)
+    dy = r*np.sin(np.pi*thetalist[i+2]/180)
+    newX = round((x+dx)*2)/2
+    newY = round((y+dy)*2)/2
+    c2c = round(np.sqrt(np.square(x - newX) + np.square(y - newY)), 2)
+    if thetalist[i+2] < 0:
+        thetalist[i+2] = thetalist[i+2] + 360
+    theta = thetalist[i+2]//30
+    newNodes.append((c2c, (int(newX*2), int(newY*2), theta)))
+    #c2c.append(round(np.sqrt(np.square(x - round((x + dx)*2)/2) + np.square(y - round((y+dy)*2)/2)), 2))
+    #c2g.append(round(np.sqrt(np.square(goalx - newX) + np.square(goaly - newY)), 2))
+
+  return newNodes
+
+def heuristic(node, goal_node, weight):
+  return weight * np.sqrt(np.square(goal_node[0] - node[0]) + np.square(goal_node[1] - node[1]))
+
+def a_star_algorithm(start, goal, obstacles, weight):
+    start_node = (int(start[0]*2), int(start[1]*2), start[2])
+    goal_node = (int(goal[0]*2), int(goal[1]*2), goal[2])
+
     # Create cost_grid and initialize cost to come for start_node
     cost_grid = [[[float('inf')] * 12 for _ in range(500)] for _ in range(1200)]
     cost_grid[start_node[0]][start_node[1]][start_node[2]] = 0
@@ -263,27 +271,20 @@ def a_star_algorithm(start_node, goal_node, obstacles, weight):
             return parent_grid, visited_list
 
         # Get neighboring nodes
-        straight_moves = get_straight_moves(node)
-        diagonal_moves = get_diagonal_moves(node)
+        actions = newNodes(node, goal_node, 1)
         node_cost = cost_grid[node[0]][node[1]][node[2]]
 
-        for move in straight_moves:
+        for action in actions:
+            # action = (c2c,(x,y,theta))
+            action_cost = action[0]
+            move = action[1]
             if not visited_grid[move[0]][move[1]][move[2]] and not inObstacle(move):
-                new_cost = node_cost + 1
+                new_cost = node_cost + action_cost
                 if new_cost < cost_grid[move[0]][move[1]][move[2]]:
                     cost_grid[move[0]][move[1]][move[2]] = new_cost
                     priority = new_cost + heuristic(move, goal_node, weight)
                     open_queue.put(priority, move)                    
                     parent_grid[move[0]][move[1]][move[2]] = node
-
-        for move in diagonal_moves:
-            if not visited_grid[move[0]][move[1]][move[2]] and not inObstacle(move):
-                new_cost = node_cost + 1.4
-                if new_cost < cost_grid[move[0]][move[1]][move[2]]:
-                    cost_grid[move[0]][move[1]][move[2]] = new_cost
-                    priority = new_cost + heuristic(move, goal_node, weight)
-                    open_queue.put(priority, move)  
-                    parent_grid[move[0]][move[1]][move[2]] = node  
 
     return print("Failed to find goal")
 
@@ -291,52 +292,61 @@ def a_star_algorithm(start_node, goal_node, obstacles, weight):
 def find_path(parent_grid, start, goal):
     current_node = goal
     path = [current_node]
-    while start != current_node:
-        current_node = parent_grid[current_node[0]][current_node[1]]
+    start_node = start
+    while start_node != current_node:
+        print(current_node)
+        temp_node = parent_grid[int(current_node[0])][int(current_node[1])][current_node[2]]
+        current_node = temp_node
         path.insert(0, current_node)
+    print(path)
     return path
-
 
 #### Main ###
 # Get obstacles
 obstacles = obstacle_space()
 padding = 0
 
-# Get and verify input coordinates
-xs = int(input('Enter x coordinate value for start coordinate: '))
-ys = int(input('Enter y coordinate value for start coordinate: '))
-thetas = int(input('Enter theta value for start coordinate: '))
-start_node = tuple((xs, ys, thetas))
-while inObstacle(start_node):
-    print('Node outside workspace or in obstacle. Choose new start location')
-    xs = int(input('Enter x coordinate value for start location: '))
-    ys = int(input('Enter y coordinate value for start location: '))
-    thetas = int(input('Enter theta value for start coordinate: '))      
-    start_node = tuple((xs, ys, thetas))
+# # Get and verify input coordinates
+# xs = int(input('Enter x coordinate value for start coordinate: '))
+# ys = int(input('Enter y coordinate value for start coordinate: '))
+# thetas = int(input('Enter theta value for start coordinate: '))
+# start = tuple((xs, ys, thetas))
+# while inObstacle(start_node):
+#     print('Node outside workspace or in obstacle. Choose new start location')
+#     xs = int(input('Enter x coordinate value for start location: '))
+#     ys = int(input('Enter y coordinate value for start location: '))
+#     thetas = int(input('Enter theta value for start coordinate: '))      
+#     start = tuple((xs, ys, thetas))
 
-# Get and verify input coordinates
-xg = int(input('Enter x coordinate value for goal coordinate: '))
-yg = int(input('Enter y coordinate value for goal coordinate: '))
-thetag = int(input('Enter theta value for goal coordinate: '))
-goal_node = tuple((xg, yg, thetag))
-while inObstacle(goal_node):
-    print('Node outside workspace or in obstacle. Choose new goal location')
-    xg = int(input('Enter x coordinate value for goal location: '))
-    yg = int(input('Enter y coordinate value for goal location: '))
-    thetag = int(input('Enter theta value for goal coordinate: '))
-    goal_node = tuple((xg, yg, thetag))
+# # Get and verify input coordinates
+# xg = int(input('Enter x coordinate value for goal coordinate: '))
+# yg = int(input('Enter y coordinate value for goal coordinate: '))
+# thetag = int(input('Enter theta value for goal coordinate: '))
+# goal = tuple((xg, yg, thetag))
+# while inObstacle(goal_node):
+#     print('Node outside workspace or in obstacle. Choose new goal location')
+#     xg = int(input('Enter x coordinate value for goal location: '))
+#     yg = int(input('Enter y coordinate value for goal location: '))
+#     thetag = int(input('Enter theta value for goal coordinate: '))
+#     goal = tuple((xg, yg, thetag))
+
+start_node = (3, 3, 1)
+goal_node = (37.5, 37.5, 2)
+
+start = (int(start_node[0]*2), int(start_node[1]*2), start_node[2])
+goal = (int(goal_node[0]*2), int(goal_node[1]*2), goal_node[2])
 
 # Start timer
 ti = time.time()
 
 print('Exploring nodes...')
-explored_dict = a_star_algorithm(start_node, goal_node, obstacles, 1)
+explored_dict = a_star_algorithm(start_node, goal_node, obstacles, 0)
 
 print('Generating path...')
-path = find_path(explored_dict[0], start_node, goal_node)
+path = find_path(explored_dict[0], start, goal)
 
 # Get time taken to find path
 tf = time.time()
 print('Path found in: ', tf-ti)
 
-record_animation(obstacles, explored_dict[1], path, start_node, goal_node)
+record_animation(obstacles, explored_dict[1], path, start, goal)
