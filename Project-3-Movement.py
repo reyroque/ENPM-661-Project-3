@@ -1,7 +1,7 @@
 import numpy as np
 
 # Take current node from open list and make 8 new nodes and 8 new costs
-def newNodes(nodeState, Goal):
+def newNodes(nodeState, Goal, r):
 
   # Extract current node information
   node = tuple(nodeState)
@@ -16,7 +16,6 @@ def newNodes(nodeState, Goal):
   goaltheta = goal[2]
 
   # define distance (r), and make empty lists to fill with values
-  r = 0.5
   newNodes = [] # new node information
   thetalist = [] # list of angles for calculations from 0 deg to 330 deg
   dx = [] # list of changes in x direction
@@ -54,9 +53,12 @@ node = (.5,.5,0)
 # test goal node
 goal = (0, 0, 0)
 
+# Step Size
+r = 2.0
+
 # Test function
 #newNodes, c2c, c2g] = newNodes(node, goal)
-newNodes = newNodes(node, goal)
+newNodes = newNodes(node, goal, r)
 print('')
 print(newNodes)
 print('')
