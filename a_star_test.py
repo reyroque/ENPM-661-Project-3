@@ -42,10 +42,6 @@ class UpdateableQueue:
     def __contains__(self, item):
         return item in self.entry_finder
 
-###### Move functions ######
-
-###### End Move functions ######
-
 ###---------------------------------------###
 
 # Check to see if node in question lies within obstacle space
@@ -86,6 +82,16 @@ def inObstacle(maybeNode):
 
   # return "vibes". False = node is in free space. True = node is out of map or in obstacle.
   return vibes
+
+def inGoal(node, goal_node):
+    goal_radius = 3
+    x_goal = goal_node[0]
+    y_goal = goal_node[1]
+    theta_goal = goal_node[2]
+    x_node = node[0]
+    y_node = node[1]
+    theta_node = node[2]
+    return np.sqrt(np.square(x_node-x_goal) + np.square(y_node-y_goal)) < goal_radius
 
 # Determines the edges of a hexagon of r radius at a given point and angle
 def get_hexagon_coordinates(center_coordinate, radius, angle, padding):
@@ -194,49 +200,45 @@ def obstacle_space():
 
     return obstacle_list
 
+###### Move functions ######
 def newNodes(nodeState, Goal, r):
-  # Extract current node information
-  node = tuple(nodeState)
-  x = node[0]/2
-  y = node[1]/2
-  theta = node[2]
+    # Extract current node information
+    node = tuple(nodeState)
+    x = node[0]/2
+    y = node[1]/2
+    
+    # Converting index to angle between 0 - 330
+    theta = node[2]*30
 
-  # Extract goal node information
-  goal = tuple(Goal)
-  goalx = goal[0]/2
-  goaly = goal[1]/2
-  goaltheta = goal[2]
+    # Extract goal node information
+    goal = tuple(Goal)
+    goalx = goal[0]/2
+    goaly = goal[1]/2
+    goaltheta = goal[2]
 
-  # define distance (r), and make empty lists to fill with values
-  newNodes = [] # new node information
-  thetalist = [] # list of angles for calculations from 0 deg to 330 deg
-  dx = [] # list of changes in x direction
-  dy = [] # list of changes in y direction
-  c2c = [] # list of costs to come for each new node from parent node
-  c2g = [] # list of costs to go for each new node to the goal node
+    # define distance (r), and make empty lists to fill with values
+    newNodes = [] # new node information
+    thetalist = [] # list of angles for calculations from 0 deg to 330 deg
+    dx = [] # list of changes in x direction
+    dy = [] # list of changes in y direction
+    c2c = [] # list of costs to come for each new node from parent node
+    c2g = [] # list of costs to go for each new node to the goal node
 
-  i = 0
+    i = 0
 
-  # For all 12 new nodes, calculate new angle (0 -> 330 deg), the dx and dy values, and add them to the newNodes list
-  # Then calculate C2C and C2G for each new node using distance between two points calculation
-  for i in range (-2,3):
-    if theta + 30* i > 330:
-      thetalist.append(theta + 30*i - 360)
-    else: 
-      thetalist.append(theta + 30*i)
-    dx = r*np.cos(np.pi*thetalist[i+2]/180)
-    dy = r*np.sin(np.pi*thetalist[i+2]/180)
-    newX = round((x+dx)*2)/2
-    newY = round((y+dy)*2)/2
-    c2c = round(np.sqrt(np.square(x - newX) + np.square(y - newY)), 2)
-    if thetalist[i+2] < 0:
-        thetalist[i+2] = thetalist[i+2] + 360
-    theta = thetalist[i+2]//30
-    newNodes.append((c2c, (int(newX*2), int(newY*2), theta)))
-    #c2c.append(round(np.sqrt(np.square(x - round((x + dx)*2)/2) + np.square(y - round((y+dy)*2)/2)), 2))
-    #c2g.append(round(np.sqrt(np.square(goalx - newX) + np.square(goaly - newY)), 2))
-
-  return newNodes
+    # For all 12 new nodes, calculate new angle (0 -> 330 deg), the dx and dy values, and add them to the newNodes list
+    # Then calculate C2C and C2G for each new node using distance between two points calculation
+    for i in range(-2, 3):
+        new_theta = (theta + 30 * i) % 360  # Ensure angle stays within range 0 to 360 degrees
+        thetalist.append(new_theta)
+        dx = r * np.cos(np.pi * new_theta / 180)
+        dy = r * np.sin(np.pi * new_theta / 180)
+        newX = round((x + dx) * 2) / 2
+        newY = round((y + dy) * 2) / 2
+        c2c = round(np.sqrt(np.square(x - newX) + np.square(y - newY)), 2)
+        newNodes.append((c2c*2, (int(newX * 2), int(newY * 2), new_theta//30)))
+    return newNodes
+###### End Move functions ######
 
 def heuristic(node, goal_node, weight):
   return weight * np.sqrt(np.square(goal_node[0] - node[0]) + np.square(goal_node[1] - node[1]))
@@ -267,11 +269,11 @@ def a_star_algorithm(start, goal, obstacles, weight):
         visited_grid[node[0]][node[1]][node[2]] = True
         visited_list.append(node)
 
-        if node == goal_node:
+        if inGoal(node, goal_node):
             return parent_grid, visited_list
 
         # Get neighboring nodes
-        actions = newNodes(node, goal_node, 1)
+        actions = newNodes(node, goal_node, 0.5)
         node_cost = cost_grid[node[0]][node[1]][node[2]]
 
         for action in actions:
@@ -286,19 +288,19 @@ def a_star_algorithm(start, goal, obstacles, weight):
                     open_queue.put(priority, move)                    
                     parent_grid[move[0]][move[1]][move[2]] = node
 
-    return print("Failed to find goal")
+    return parent_grid, visited_list, print("Failed to find goal")
 
 # Backtracking using path list created from visited/path dictionary
-def find_path(parent_grid, start, goal):
-    current_node = goal
+def find_path(parent_grid, visited_list, start):
+    current_node = visited_list[-1]
     path = [current_node]
     start_node = start
     while start_node != current_node:
-        print(current_node)
+        #print(current_node)
         temp_node = parent_grid[int(current_node[0])][int(current_node[1])][current_node[2]]
         current_node = temp_node
         path.insert(0, current_node)
-    print(path)
+    #print(path)
     return path
 
 #### Main ###
@@ -330,8 +332,8 @@ padding = 0
 #     thetag = int(input('Enter theta value for goal coordinate: '))
 #     goal = tuple((xg, yg, thetag))
 
-start_node = (3, 3, 1)
-goal_node = (37.5, 37.5, 2)
+start_node = (3, 125, 1)
+goal_node = (200, 125, 2)
 
 start = (int(start_node[0]*2), int(start_node[1]*2), start_node[2])
 goal = (int(goal_node[0]*2), int(goal_node[1]*2), goal_node[2])
@@ -340,13 +342,15 @@ goal = (int(goal_node[0]*2), int(goal_node[1]*2), goal_node[2])
 ti = time.time()
 
 print('Exploring nodes...')
-explored_dict = a_star_algorithm(start_node, goal_node, obstacles, 0)
+explored = a_star_algorithm(start_node, goal_node, obstacles, 1)
+parent_grid = explored[0]
+visited_list = explored[1]
 
 print('Generating path...')
-path = find_path(explored_dict[0], start, goal)
+path = find_path(parent_grid, visited_list, start)
 
 # Get time taken to find path
 tf = time.time()
 print('Path found in: ', tf-ti)
 
-record_animation(obstacles, explored_dict[1], path, start, goal)
+record_animation(obstacles, visited_list, path, start, goal)
