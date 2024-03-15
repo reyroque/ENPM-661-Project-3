@@ -113,7 +113,7 @@ def getRecPoints(currentNode):
   # coordinates of center of circle and orientation
   xc = currentNode[0]
   yc = currentNode[1]
-  theta = currentNode[2]
+  theta = currentNode[2]*30
 
   # square side length
   s = 5.0
@@ -378,7 +378,7 @@ padding = 0
 #     thetag = int(input('Enter theta value for goal coordinate: '))
 #     goal = tuple((xg, yg, thetag))
 
-start_node = (6, 6, 1)
+start_node = (6, 6, 6)
 goal_node = (12, 125, 2)
 
 start = (int(start_node[0]*2), int(start_node[1]*2), start_node[2])
@@ -398,5 +398,5 @@ path = find_path(parent_grid, visited_list, start)
 # Get time taken to find path
 tf = time.time()
 print('Path found in: ', tf-ti)
-
+print(path)
 record_animation(obstacles, visited_list, path, start, goal)
