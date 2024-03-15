@@ -202,7 +202,7 @@ def record_animation(obstacles, explored, path, start_node, goal_node):
     # Initialize VideoWriter
     v_writer = cv2.VideoWriter_fourcc(*'mp4v')
     fps = 60
-    video_output = cv2.VideoWriter('dijkstra_output.mp4', v_writer, fps, (1200, 500))
+    video_output = cv2.VideoWriter('a_star_output.mp4', v_writer, fps, (1200, 500))
 
     canvas = np.ones((500, 1200, 3), dtype=np.uint8) * 255  # White canvas
     
@@ -233,7 +233,10 @@ def obstacle_space():
 
     return obstacle_list
 
-def dijkstra_algorithm(start_node, goal_node, obstacles):
+def heuristic(node, goal_node, weight):
+    return weight * np.sqrt((goal_node[0] - node[0])**2 + (goal_node[1] - node[1])**2)
+
+def a_star_algorithm(start_node, goal_node, obstacles, weight):
     # Create cost_grid and initialize cost to come for start_node
     cost_grid = [[float('inf')] * 500 for _ in range(1200)]
     cost_grid[start_node[0]][start_node[1]] = 0
@@ -244,7 +247,6 @@ def dijkstra_algorithm(start_node, goal_node, obstacles):
 
     # Create grid to store parents
     visited_grid = [[False] * 500 for _ in range(1200)]
-
     visited_list = []
 
     # Priority queue to store open nodes
@@ -270,15 +272,17 @@ def dijkstra_algorithm(start_node, goal_node, obstacles):
                 new_cost = node_cost + 1
                 if new_cost < cost_grid[move[0]][move[1]]:
                     cost_grid[move[0]][move[1]] = new_cost
-                    open_queue.put(new_cost, move)
+                    priority = new_cost + heuristic(move, goal_node, weight)
+                    open_queue.put(priority, move)                    
                     parent_grid[move[0]][move[1]] = node
 
         for move in diagonal_moves:
             if not visited_grid[move[0]][move[1]] and not inObstacle(move):
-                new_cost = cost_grid[node[0]][node[1]] + 1.4
+                new_cost = node_cost + np.sqrt(2)
                 if new_cost < cost_grid[move[0]][move[1]]:
                     cost_grid[move[0]][move[1]] = new_cost
-                    open_queue.put(new_cost, move)
+                    priority = new_cost + heuristic(move, goal_node, weight)
+                    open_queue.put(priority, move)  
                     parent_grid[move[0]][move[1]] = node  
 
     return print("Failed to find goal")
@@ -311,18 +315,18 @@ while inObstacle(start_node):
 # Get and verify input coordinates
 xg = int(input('Enter x coordinate value for goal coordinate: '))
 yg = int(input('Enter y coordinate value for goal coordinate: '))
-goal_node = tuple((xg,yg))
+goal_node = tuple((xg, yg))
 while inObstacle(goal_node):
     print('Node outside workspace or in obstacle. Choose new goal location')
     xg = int(input('Enter x coordinate value for goal location: '))
     yg = int(input('Enter y coordinate value for goal location: '))
-    goal_node = tuple((xg,yg))
+    goal_node = tuple((xg, yg))
 
 # Start timer
 ti = time.time()
 
 print('Exploring nodes...')
-explored_dict = dijkstra_algorithm(start_node, goal_node, obstacles)
+explored_dict = a_star_algorithm(start_node, goal_node, obstacles, 0)
 
 print('Generating path...')
 path = find_path(explored_dict[0], start_node, goal_node)
