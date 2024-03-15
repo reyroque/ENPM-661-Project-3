@@ -1,4 +1,6 @@
 import numpy as np
+import cv2
+
 
 # Take current node from open list and make 8 new nodes and 8 new costs
 def newNodes(nodeState, Goal, r):
@@ -66,3 +68,52 @@ print('')
 def heuristic(node, goal_node, weight):
   return weight * np.sqrt(np.square(goal_node[0] - node[0]) + np.square(goal_node[1] - node[1]))
   
+def getRecPoints(currentNode):
+
+  # coordinates of center of circle and orientation
+  xc = currentNode[0]
+  yc = currentNode[1]
+  theta = currentNode[2]
+
+  # square side length
+  s = 5.0
+
+  # top right
+  x1 = xc + s*(np.cos(theta) - np.sin(theta))
+  y1 = 500 - yc + s*(np.sin(theta) + np.cos(theta))
+
+  # top left
+  x2 = xc + s*(-np.cos(theta) - np.sin(theta))
+  y2 = 500 - yc + s*(-np.sin(theta) + np.cos(theta))
+
+  # bottom left
+  x3 = xc + s*(-np.cos(theta) + np.sin(theta))
+  y3 = 500 - yc + s*(-np.sin(theta) - np.cos(theta))
+
+  # bottom right
+  x4 = xc + s*(np.cos(theta) + np.sin(theta))
+  y4 = 500 - yc + s*(np.sin(theta) - np.cos(theta))
+
+  coords = np.array([[x1, y1], [x2, y2], [x3, y3], [x4, y4]])
+
+  return coords
+
+##### TEST #####
+
+currentNode = (10, 10, 45)
+
+green = (31, 80, 12)
+
+# Make white canvas
+map = np.ones((500,1200,3), dtype=np.uint8) # blank map
+map = 255*map # make it white
+
+points = getRecPoints(currentNode)
+points = points.reshape(-1,1,2)
+cv2.fillPoly(map, np.int32([points]), green)
+#cv2.polylines(map, np.int32([points]), isClosed=True,thickness=1,color=green)
+
+cv2.drawMarker(map, (currentNode[0],500-currentNode[1]), color = green, thickness=2, markerType= cv2.MARKER_SQUARE, line_type=cv2.LINE_AA, markerSize=1)
+
+cv2.imshow("map", map)
+cv2.waitKey(0)
