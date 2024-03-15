@@ -43,7 +43,6 @@ class UpdateableQueue:
         return item in self.entry_finder
 
 ###---------------------------------------###
-
 # Check to see if node in question lies within obstacle space
 # Return 'False' if in free space, 'True' if in an obstacle or outside the boundaries
 # These equations include the 5 space boundary around the obstacles  
@@ -53,31 +52,33 @@ def inObstacle(maybeNode):
   xnode = node[0]
   ynode = node[1]
   vibes = False
+  padding = 5
+  radius = 5
 
   # check if in map
-  if xnode < 5 or xnode > 1195 or ynode < 5 or ynode > 495:
+  if xnode < 5 + radius or xnode > 1195 - radius or ynode < 5 + radius or ynode > 495 - radius:
     vibes = True
 
   # check first obstacle (rectangle)
-  elif xnode > 95 and xnode < 180 and ynode > 95:# and ynode <= 500:
+  elif xnode > 95 - radius and xnode < 180 + radius and ynode > 95 - radius:# and ynode <= 500:
     vibes = True
 
   # check second obstacle (rectangle)
-  elif xnode > 270 and xnode < 355 and ynode < 405: # and ynode >= 0
+  elif xnode > 270 - radius and xnode < 355 + radius and ynode < 405 + radius: # and ynode >= 0
     vibes = True
 
   # check third obstacle (hexagon)
-  elif xnode > 515 and xnode < 785 and (0.556*xnode - ynode + 43.66 > 0) and (-0.556*xnode - ynode + 766.4 > 0) and (-0.556*xnode - ynode + 456.34 < 0) and (0.556*xnode - ynode - 266.4 < 0):
+  elif xnode > 515 - radius and xnode < 785 + radius and (0.556*xnode - ynode + 43.66 > 0) and (-0.556*xnode - ynode + 766.4 > 0) and (-0.556*xnode - ynode + 456.34 < 0) and (0.556*xnode - ynode - 266.4 < 0):
     vibes = True
 
 # The next three compose the concave fourth obstacle
-  elif xnode > 895 and xnode < 1025 and ynode > 370 and ynode < 455:
+  elif xnode > 895 - radius and xnode < 1025 + radius and ynode > 370 - radius and ynode < 455 + radius:
     vibes = True
 
-  elif xnode > 895 and xnode < 1025 and ynode > 45 and ynode < 130:
+  elif xnode > 895 - radius and xnode < 1025 + radius and ynode > 45 - radius and ynode < 130 + radius:
     vibes = True
   
-  elif xnode > 1015 and xnode < 1105 and ynode > 45 and ynode < 455:
+  elif xnode > 1015 - radius and xnode < 1105 + radius and ynode > 45 - radius and ynode < 455 + radius:
     vibes = True
 
   # return "vibes". False = node is in free space. True = node is out of map or in obstacle.
@@ -95,6 +96,7 @@ def inGoal(node, goal_node):
 
 # Determines the edges of a hexagon of r radius at a given point and angle
 def get_hexagon_coordinates(center_coordinate, radius, angle, padding):
+
     # Define angles for each point of the hexagon
     angles = np.deg2rad(np.arange(0, 360, 60) + angle)
     
@@ -105,6 +107,36 @@ def get_hexagon_coordinates(center_coordinate, radius, angle, padding):
     # Combine x and y coordinates into tuples
     coordinates = [(int(x), int(y)) for x, y in zip(x_coordinates, y_coordinates)]
     return coordinates
+
+def getRecPoints(currentNode):
+
+  # coordinates of center of circle and orientation
+  xc = currentNode[0]
+  yc = currentNode[1]
+  theta = currentNode[2]
+
+  # square side length
+  s = 5.0
+
+  # top right
+  x1 = xc + s*(np.cos(theta) - np.sin(theta))
+  y1 = 500 - yc + s*(np.sin(theta) + np.cos(theta))
+
+  # top left
+  x2 = xc + s*(-np.cos(theta) - np.sin(theta))
+  y2 = 500 - yc + s*(-np.sin(theta) + np.cos(theta))
+
+  # bottom left
+  x3 = xc + s*(-np.cos(theta) + np.sin(theta))
+  y3 = 500 - yc + s*(-np.sin(theta) - np.cos(theta))
+
+  # bottom right
+  x4 = xc + s*(np.cos(theta) + np.sin(theta))
+  y4 = 500 - yc + s*(np.sin(theta) - np.cos(theta))
+
+  coords = np.array([[x1, y1], [x2, y2], [x3, y3], [x4, y4]])
+
+  return coords
 
 # Draws start node and end node
 def draw_nodes(canvas, start_node, goal_node):
@@ -126,7 +158,7 @@ def draw_obstacles(canvas, obstacles, video_output):
             polygon = np.array(obstacle)
             polygon = polygon.reshape(-1, 1, 2)
             cv2.fillPoly(canvas, [polygon], color=(0, 0, 0))
-    cv2.imshow('Dijkstra', canvas)
+    cv2.imshow('A*', canvas)
     video_output.write(canvas)
     cv2.waitKey(2000)
     return
@@ -139,7 +171,7 @@ def draw_explored(canvas, points, video_output):
         count += 1
         if count % 1000 == 0:
             count = 0
-            cv2.imshow('Dijkstra', canvas)
+            cv2.imshow('A*', canvas)
             cv2.waitKey(int(1000 / 120)) 
             video_output.write(canvas)   
     return
@@ -148,13 +180,26 @@ def draw_explored(canvas, points, video_output):
 def draw_path(canvas, path, video_output):
     count = 0
     for point in path:
-        cv2.rectangle(canvas, (point[0], 500-point[1]), (point[0] + 1, 500-point[1] + 1), color=(0, 0, 250), thickness=2)
+        # Draw the path node
+        cv2.rectangle(canvas, (point[0], 500 - point[1]), (point[0] + 1, 500 - point[1] + 1), color=(0, 0, 250), thickness=2)
+
+        # Calculate square points
+        square_points = getRecPoints(point)
+        square_points = square_points.reshape(-1, 1, 2).astype(np.int32)  # Convert to int32
+
+        # Create a temporary copy of the canvas
+        temp_canvas = canvas.copy()
+
+        # Draw new square on the temporary canvas
+        cv2.fillPoly(temp_canvas, [square_points], (0, 250, 0))
+
         count += 1
-        if count % 5 == 0:
+        if count % 1 == 0:
             count = 0
-            cv2.imshow('Dijkstra', canvas)
-            video_output.write(canvas)
-            cv2.waitKey(int(1000 / 120))  
+            cv2.imshow('A*', temp_canvas)
+            video_output.write(temp_canvas)
+            cv2.waitKey(int(1000 / 60))
+
     return
 
 # Adds seconds at end of video
@@ -273,7 +318,8 @@ def a_star_algorithm(start, goal, obstacles, weight):
             return parent_grid, visited_list
 
         # Get neighboring nodes
-        actions = newNodes(node, goal_node, 0.5)
+        step = 0.5
+        actions = newNodes(node, goal_node, step)
         node_cost = cost_grid[node[0]][node[1]][node[2]]
 
         for action in actions:
@@ -332,8 +378,8 @@ padding = 0
 #     thetag = int(input('Enter theta value for goal coordinate: '))
 #     goal = tuple((xg, yg, thetag))
 
-start_node = (3, 125, 1)
-goal_node = (200, 125, 2)
+start_node = (6, 6, 1)
+goal_node = (12, 125, 2)
 
 start = (int(start_node[0]*2), int(start_node[1]*2), start_node[2])
 goal = (int(goal_node[0]*2), int(goal_node[1]*2), goal_node[2])
@@ -342,7 +388,7 @@ goal = (int(goal_node[0]*2), int(goal_node[1]*2), goal_node[2])
 ti = time.time()
 
 print('Exploring nodes...')
-explored = a_star_algorithm(start_node, goal_node, obstacles, 1)
+explored = a_star_algorithm(start_node, goal_node, obstacles, 2)
 parent_grid = explored[0]
 visited_list = explored[1]
 
