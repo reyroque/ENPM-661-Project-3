@@ -92,7 +92,7 @@ def inGoal(node, goal_node):
     x_node = node[0]
     y_node = node[1]
     theta_node = node[2]
-    return np.sqrt(np.square(x_node-x_goal) + np.square(y_node-y_goal)) < goal_radius
+    return np.sqrt(np.square(x_node-x_goal) + np.square(y_node-y_goal)) < goal_radius and theta_node == theta_goal
 
 # Determines the edges of a hexagon of r radius at a given point and angle
 def get_hexagon_coordinates(center_coordinate, radius, angle, padding):
@@ -169,7 +169,7 @@ def draw_explored(canvas, points, video_output):
     for point in points:
         cv2.rectangle(canvas, (point[0], 500-point[1]), (point[0] + 1, 500-point[1] + 1), color=(200, 0, 0), thickness=-1)
         count += 1
-        if count % 1000 == 0:
+        if count % 3000 == 0:
             count = 0
             cv2.imshow('A*', canvas)
             cv2.waitKey(int(1000 / 120)) 
@@ -198,7 +198,10 @@ def draw_path(canvas, path, video_output):
             count = 0
             cv2.imshow('A*', temp_canvas)
             video_output.write(temp_canvas)
-            cv2.waitKey(int(1000 / 60))
+            video_output.write(temp_canvas)
+            video_output.write(temp_canvas)
+            video_output.write(temp_canvas)
+            cv2.waitKey(int(1000 / 20))
 
     return
 
@@ -270,6 +273,7 @@ def newNodes(nodeState, Goal, r):
     c2g = [] # list of costs to go for each new node to the goal node
 
     i = 0
+    padding = 5
 
     # For all 12 new nodes, calculate new angle (0 -> 330 deg), the dx and dy values, and add them to the newNodes list
     # Then calculate C2C and C2G for each new node using distance between two points calculation
@@ -281,7 +285,9 @@ def newNodes(nodeState, Goal, r):
         newX = round((x + dx) * 2) / 2
         newY = round((y + dy) * 2) / 2
         c2c = round(np.sqrt(np.square(x - newX) + np.square(y - newY)), 2)
-        newNodes.append((c2c*2, (int(newX * 2), int(newY * 2), new_theta//30)))
+        # check if in map
+        if not (int(newX * 2) < 5 + padding or int(newX * 2) > 1195 - padding or int(newY * 2) < 5 + padding or int(newY * 2) > 495 - padding):
+            newNodes.append((c2c*2, (int(newX * 2), int(newY * 2), new_theta//30)))
     return newNodes
 ###### End Move functions ######
 
@@ -318,7 +324,7 @@ def a_star_algorithm(start, goal, obstacles, weight):
             return parent_grid, visited_list
 
         # Get neighboring nodes
-        step = 0.5
+        step = 5
         actions = newNodes(node, goal_node, step)
         node_cost = cost_grid[node[0]][node[1]][node[2]]
 
@@ -378,8 +384,8 @@ padding = 0
 #     thetag = int(input('Enter theta value for goal coordinate: '))
 #     goal = tuple((xg, yg, thetag))
 
-start_node = (6, 6, 6)
-goal_node = (12, 125, 2)
+start_node = (50//2, 50//2, 6)
+goal_node = (1175//2, 125//2, 2)
 
 start = (int(start_node[0]*2), int(start_node[1]*2), start_node[2])
 goal = (int(goal_node[0]*2), int(goal_node[1]*2), goal_node[2])
@@ -388,7 +394,7 @@ goal = (int(goal_node[0]*2), int(goal_node[1]*2), goal_node[2])
 ti = time.time()
 
 print('Exploring nodes...')
-explored = a_star_algorithm(start_node, goal_node, obstacles, 2)
+explored = a_star_algorithm(start_node, goal_node, obstacles, 3)
 parent_grid = explored[0]
 visited_list = explored[1]
 
@@ -398,5 +404,5 @@ path = find_path(parent_grid, visited_list, start)
 # Get time taken to find path
 tf = time.time()
 print('Path found in: ', tf-ti)
-print(path)
+# print(path)
 record_animation(obstacles, visited_list, path, start, goal)
