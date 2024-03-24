@@ -116,6 +116,7 @@ def get_hexagon_coordinates(center_coordinate, radius, angle, clearance):
     coordinates = [(int(x), int(y)) for x, y in zip(x_coordinates, y_coordinates)]
     return coordinates
 
+# Used to draw an angled square "robot" during visualization
 def getRecPoints(currentNode):
 
   # coordinates of center of circle and orientation
@@ -156,9 +157,11 @@ def draw_obstacles(canvas, obstacles, video_output):
     for obstacle in obstacles:       
         if len(obstacle) == 2 and obstacle != ((0,0),(1200,500)):
             start_x = obstacle[0][0]
-            start_y = 500 - obstacle[0][1]  # Invert y-value
+            # Invert y-value
+            start_y = 500 - obstacle[0][1]
             end_x = obstacle[1][0]
-            end_y = 500 - obstacle[1][1]  # Invert y-value
+            # Invert y-value
+            end_y = 500 - obstacle[1][1]
             start_coordinate = (start_x, start_y)
             end_coordinate = (end_x, end_y)
             cv2.rectangle(canvas, pt1=start_coordinate, pt2=end_coordinate, color=(0, 0, 0), thickness=-1)
@@ -179,7 +182,7 @@ def draw_explored(canvas, points, step, video_output):
         point = points[i]
 
         # Calculate inverted angle so line gets drawn towards parent node
-        angle_degrees = (point[2] * 30 + 180) % 360  # Convert index to degrees and invert
+        angle_degrees = (point[2] * 30 + 180) % 360 
 
         # Convert angle to radians
         angle_radians = np.radians(angle_degrees)
@@ -207,8 +210,8 @@ def draw_path(canvas, path, step, video_output):
         # Draw the path node
         cv2.rectangle(canvas, (point[0], 500 - point[1]), (point[0] + 1, 500 - point[1] + 1), color=(0, 0, 250), thickness=2)
 
-        # Calculate inverted angle
-        angle_degrees = (point[2] * 30 + 180) % 360  # Convert index to degrees and invert
+        # Calculate inverted angle so line gets drawn towards parent node
+        angle_degrees = (point[2] * 30 + 180) % 360 
 
         # Convert angle to radians
         angle_radians = np.radians(angle_degrees)
@@ -222,7 +225,8 @@ def draw_path(canvas, path, step, video_output):
 
         # Calculate square points
         square_points = getRecPoints(point)
-        square_points = square_points.reshape(-1, 1, 2).astype(np.int32)  # Convert to int32
+        # Convert to int32
+        square_points = square_points.reshape(-1, 1, 2).astype(np.int32)
 
         # Create a temporary copy of the canvas
         temp_canvas = canvas.copy()
@@ -393,10 +397,11 @@ def find_path(parent_grid, visited_list, start):
 # Get obstacle coordinates
 obstacles = obstacle_space()
 #clearance = 5
-step = 10
+#step = 10
 weight = 1
 
 clearance = int(input('Enter clearance value: '))
+step = int(input('Enter step value: '))
 
 # Get and verify input coordinates
 xs = int(input('Enter x coordinate value for start coordinate: '))//2
