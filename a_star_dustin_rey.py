@@ -1,6 +1,8 @@
 # ENPM661 Project 3 Part 1 Submission
 # Rey Roque-Pérez and Dustin Hartnett
 
+# Github Repository: https://github.com/reyroque/ENPM-661-Project-3/tree/main
+
 from queue import PriorityQueue
 import time
 
