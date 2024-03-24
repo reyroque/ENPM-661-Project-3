@@ -24,14 +24,11 @@ class UpdateableQueue:
                 self.entry_finder[item] = (priority, item)
                 # Update the priority in the queue
                 self.queue.put((priority, item))
-                #print('Node Replaced in queue')
-            #else:
-                #print('Node already in queue')
+                
         else:
             entry = (priority, item)
             self.entry_finder[item] = entry
             self.queue.put(entry)
-            #print('Node Added to queue')
 
     def remove(self, item):
         entry = self.entry_finder.pop(item)
@@ -62,31 +59,37 @@ def inObstacle(maybeNode, clearance):
   xnode = node[0]
   ynode = node[1]
   vibes = False
+  
+  # define slopes for lines of hexagon obstacle
+  m1 = ((400 + clearance) - (325 + clearance)) / (650 - (520 - clearance))
+  m2 = ((325 + clearance) - (400 + clearance)) / ((780 + clearance) - 650)
+  m3 = ((175 - clearance) - (100 - clearance)) / ((780 + clearance) - 650)
+  m4 = ((100 - clearance) - (175 - clearance)) / (650 - (520 - clearance))
 
   # check if in map
-  if xnode < 5 + clearance or xnode > 1195 - clearance or ynode < 5 + clearance or ynode > 495 - clearance:
+  if xnode < 0 + clearance or xnode > 1200 - clearance or ynode < 0 + clearance or ynode > 500 - clearance:
     vibes = True
 
   # check first obstacle (rectangle)
-  elif xnode > 95 - clearance and xnode < 180 + clearance and ynode > 95 - clearance:# and ynode <= 500:
+  elif xnode > 100 - clearance and xnode < 175 + clearance and ynode > 100 - clearance:
     vibes = True
 
   # check second obstacle (rectangle)
-  elif xnode > 270 - clearance and xnode < 355 + clearance and ynode < 405 + clearance: # and ynode >= 0
+  elif xnode > 275 - clearance and xnode < 350 + clearance and ynode < 400 + clearance:
     vibes = True
 
   # check third obstacle (hexagon)
-  elif xnode > 515 - clearance and xnode < 785 + clearance and (0.556*xnode - ynode + 43.66 > 0) and (-0.556*xnode - ynode + 766.4 > 0) and (-0.556*xnode - ynode + 456.34 < 0) and (0.556*xnode - ynode - 266.4 < 0):
+  elif xnode > 520 - clearance and xnode < 780 + clearance and (m1 * (xnode - (520 - clearance)) - (ynode - (325 + clearance)) > 0) and (m2 * (xnode - 650) - (ynode - (400 + clearance)) > 0) and (m3 * (xnode - 650) - (ynode - (100 - clearance)) < 0) and (m4 * (xnode - (520 - clearance)) - (ynode - (175 - clearance)) < 0):
     vibes = True
 
 # The next three compose the concave fourth obstacle
-  elif xnode > 895 - clearance and xnode < 1025 + clearance and ynode > 370 - clearance and ynode < 455 + clearance:
+  elif xnode > 900 - clearance and xnode < 1020 + clearance and ynode > 375 - clearance and ynode < 450 + clearance:
     vibes = True
 
-  elif xnode > 895 - clearance and xnode < 1025 + clearance and ynode > 45 - clearance and ynode < 130 + clearance:
+  elif xnode > 900 - clearance and xnode < 1020 + clearance and ynode > 50 - clearance and ynode < 125 + clearance:
     vibes = True
   
-  elif xnode > 1015 - clearance and xnode < 1105 + clearance and ynode > 45 - clearance and ynode < 455 + clearance:
+  elif xnode > 1020 - clearance and xnode < 1100 + clearance and ynode > 50 - clearance and ynode < 450 + clearance:
     vibes = True
 
   # return "vibes". False = node is in free space. True = node is out of map or in obstacle.
@@ -102,7 +105,7 @@ def inGoal(node, goal_node):
     theta_node = node[2]
     return np.sqrt(np.square(x_node-x_goal) + np.square(y_node-y_goal)) < goal_radius and theta_node == theta_goal
 
-# Determines the edges of a hexagon of r radius at a given point and angle
+# Determines the edges of a hexagon of r radius at a given point and angle for the plot
 def get_hexagon_coordinates(center_coordinate, radius, angle, clearance):
 
     # Define angles for each point of the hexagon
@@ -289,8 +292,8 @@ def obstacle_space():
 
     return obstacle_list
 
-###### Move functions ######
-def newNodes(nodeState, Goal, r, clearance):
+###### Move functions - Gets New Nodes from action list ######
+def newNodes(nodeState, r, clearance):
     # Extract current node information
     node = tuple(nodeState)
     x = node[0]/2
@@ -299,22 +302,15 @@ def newNodes(nodeState, Goal, r, clearance):
     # Converting index to angle between 0 - 330
     theta = node[2]*30
 
-    # Extract goal node information
-    goal = tuple(Goal)
-    goalx = goal[0]/2
-    goaly = goal[1]/2
-    goaltheta = goal[2]
-
     # define distance (r), and make empty lists to fill with values
     newNodes = [] # new node information
     thetalist = [] # list of angles for calculations from 0 deg to 330 deg
     dx = [] # list of changes in x direction
     dy = [] # list of changes in y direction
     c2c = [] # list of costs to come for each new node from parent node
-    c2g = [] # list of costs to go for each new node to the goal node
 
     # For all 12 new nodes, calculate new angle (0 -> 330 deg), the dx and dy values, and add them to the newNodes list
-    # Then calculate C2C and C2G for each new node using distance between two points calculation
+    # Then calculate C2C for each new node using distance between two points calculation
     for i in range(-2, 3):
         new_theta = (theta + 30 * i) % 360  # Ensure angle stays within range 0 to 360 degrees
         thetalist.append(new_theta)
@@ -322,14 +318,14 @@ def newNodes(nodeState, Goal, r, clearance):
         dy = r * np.sin(np.pi * new_theta / 180)
         newX = round((x + dx) * 2) / 2
         newY = round((y + dy) * 2) / 2
-        #c2c = round(np.sqrt(np.square(x - newX) + np.square(y - newY)), 2)
-        c2c = r
+        c2c = r # cost to go is the step size
         # check if in map
         if not (int(newX * 2) < 5 + clearance or int(newX * 2) > 1195 - clearance or int(newY * 2) < 5 + clearance or int(newY * 2) > 495 - clearance):
             newNodes.append((c2c*2, (int(newX * 2), int(newY * 2), new_theta//30)))
     return newNodes
 ###### End Move functions ######
 
+# Calculates cost to go
 def heuristic(node, goal_node, weight):
   return weight * np.sqrt(np.square(goal_node[0] - node[0]) + np.square(goal_node[1] - node[1]))
 
@@ -363,11 +359,10 @@ def a_star_algorithm(start, goal, weight, step, clearance):
             return parent_grid, visited_list
 
         # Get neighboring nodes
-        actions = newNodes(node, goal_node, step, clearance)
+        actions = newNodes(node, step, clearance)
         node_cost = cost_grid[node[0]][node[1]][node[2]]
 
         for action in actions:
-            # action = (c2c,(x,y,theta))
             action_cost = action[0]
             move = action[1]
             if not visited_grid[move[0]][move[1]][move[2]] and not inObstacle(move, clearance):
@@ -386,49 +381,44 @@ def find_path(parent_grid, visited_list, start):
     path = [current_node]
     start_node = start
     while start_node != current_node:
-        #print(current_node)
         temp_node = parent_grid[int(current_node[0])][int(current_node[1])][current_node[2]]
         current_node = temp_node
         path.insert(0, current_node)
-    #print(path)
     return path
 
 #### Main ###
 # Get obstacle coordinates
 obstacles = obstacle_space()
-#clearance = 5
-#step = 10
-weight = 1
+weight = 1 # option for weighted A*
 
 clearance = int(input('Enter clearance value: '))
-step = int(input('Enter step value: '))
+step = int(input('Enter step value betwwen 1 and 10: '))
 
 # Get and verify input coordinates
 xs = int(input('Enter x coordinate value for start coordinate: '))//2
 ys = int(input('Enter y coordinate value for start coordinate: '))//2
 thetas = int(input('Enter theta value for start coordinate: '))//30
-start_node = tuple((xs, ys, thetas))
+start_node = tuple((xs*2, ys*2, thetas))
 while inObstacle(start_node, clearance):
     print('Node outside workspace or in obstacle. Choose new start location')
     xs = int(input('Enter x coordinate value for start location: '))//2
     ys = int(input('Enter y coordinate value for start location: '))//2
-    thetas = int(input('Enter theta value for start coordinate: '))//30     
-    start_node = tuple((xs, ys, thetas))
+    thetas = int(input('Enter theta value for start coordinate (must be multiple of 30 degrees): '))//30     
+    start_node = tuple((xs*2, ys*2, thetas))
+start_node = tuple((xs, ys, thetas))
 
 # Get and verify input coordinates
 xg = int(input('Enter x coordinate value for goal coordinate: '))//2
 yg = int(input('Enter y coordinate value for goal coordinate: '))//2
 thetag = int(input('Enter theta value for goal coordinate: '))//30
-goal_node = tuple((xg, yg, thetag))
+goal_node = tuple((xg*2, yg*2, thetag))
 while inObstacle(goal_node, clearance):
     print('Node outside workspace or in obstacle. Choose new goal location')
     xg = int(input('Enter x coordinate value for goal location: '))//2
     yg = int(input('Enter y coordinate value for goal location: '))//2
     thetag = int(input('Enter theta value for goal coordinate: '))//30
-    goal_node = tuple((xg, yg, thetag))
-
-#start_node = (50//2, 50//2, 180//30)
-#goal_node = (1175//2, 250//2, 60//30)
+    goal_node = tuple((xg*2, yg*2, thetag))
+goal_node = tuple((xg, yg, thetag))
 
 start = (int(start_node[0]*2), int(start_node[1]*2), start_node[2])
 goal = (int(goal_node[0]*2), int(goal_node[1]*2), goal_node[2])
