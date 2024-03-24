@@ -1,3 +1,6 @@
+# ENPM661 Project 3 Part 1 Submission
+# Rey Eduardo and Dustin Hartnett
+
 from queue import PriorityQueue
 import time
 
